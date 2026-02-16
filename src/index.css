@@ -1,0 +1,38 @@
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Quicksand:wght@500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #5f6f65;
+  background-color: #fcf9f2;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Nunito", sans-serif;
+  background:
+    radial-gradient(circle at 16% 12%, rgba(230, 170, 196, 0.16), transparent 38%),
+    radial-gradient(circle at 85% 18%, rgba(156, 176, 163, 0.2), transparent 42%),
+    linear-gradient(180deg, #fcf9f2 0%, #f8f4ea 100%);
+  color: #5f6f65;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: rgba(230, 170, 196, 0.35);
+}
