@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 :root {
-  color: #5f6f65;
+  color: #4f6158;
   background-color: #fcf9f2;
 }
 
@@ -21,7 +21,7 @@ body {
     radial-gradient(circle at 16% 12%, rgba(230, 170, 196, 0.16), transparent 38%),
     radial-gradient(circle at 85% 18%, rgba(156, 176, 163, 0.2), transparent 42%),
     linear-gradient(180deg, #fcf9f2 0%, #f8f4ea 100%);
-  color: #5f6f65;
+  color: #4f6158;
 }
 
 * {
@@ -35,4 +35,212 @@ a {
 
 ::selection {
   background: rgba(230, 170, 196, 0.35);
+}
+
+.glass-surface {
+  position: relative;
+  isolation: isolate;
+  overflow: var(--glass-overflow, hidden);
+  border: 1px solid var(--glass-line, rgba(156, 176, 163, 0.24));
+  background: var(--glass-bg, rgba(255, 252, 247, 0.72));
+  box-shadow: var(--glass-shadow, 0 20px 40px -28px rgba(104, 118, 110, 0.42));
+}
+
+.glass-tone-rich {
+  --glass-hl-top-strong: 0.32;
+  --glass-hl-top-soft: 0.1;
+  --glass-hl-corner-a: 0.19;
+  --glass-hl-corner-b: 0.1;
+  --glass-blur-shift: 0px;
+  --glass-sat-mult: 1;
+}
+
+.glass-tone-clear {
+  --glass-hl-top-strong: 0.24;
+  --glass-hl-top-soft: 0.06;
+  --glass-hl-corner-a: 0.14;
+  --glass-hl-corner-b: 0.06;
+  --glass-blur-shift: -2px;
+  --glass-sat-mult: 0.96;
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-surface {
+    backdrop-filter:
+      blur(calc(var(--glass-blur, 16px) + var(--glass-blur-shift, 0px)))
+      saturate(calc(var(--glass-sat, 1.12) * var(--glass-sat-mult, 1)));
+    -webkit-backdrop-filter:
+      blur(calc(var(--glass-blur, 16px) + var(--glass-blur-shift, 0px)))
+      saturate(calc(var(--glass-sat, 1.12) * var(--glass-sat-mult, 1)));
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-surface {
+    background: var(--glass-fallback, rgba(255, 252, 247, 0.92));
+  }
+}
+
+.glass-surface::before,
+.glass-surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.glass-surface::before {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, var(--glass-hl-top-strong, 0.32)) 0%,
+    rgba(255, 255, 255, var(--glass-hl-top-soft, 0.1)) 42%,
+    rgba(255, 255, 255, 0) 75%
+  );
+}
+
+.glass-surface::after {
+  background:
+    radial-gradient(
+      120% 100% at 0% 0%,
+      rgba(255, 255, 255, var(--glass-hl-corner-a, 0.19)),
+      transparent 55%
+    ),
+    radial-gradient(
+      100% 110% at 100% 100%,
+      rgba(255, 255, 255, var(--glass-hl-corner-b, 0.1)),
+      transparent 60%
+    );
+}
+
+.glass-surface > * {
+  position: relative;
+  z-index: 1;
+}
+
+.glass-tier-soft {
+  --glass-blur: 12px;
+  --glass-sat: 1.08;
+}
+
+.glass-tier-mid {
+  --glass-blur: 16px;
+  --glass-sat: 1.12;
+}
+
+.glass-tier-solid {
+  --glass-blur: 20px;
+  --glass-sat: 1.16;
+}
+
+/* Mobile GPUs are more sensitive to heavy blur + large repaint areas. */
+@media (max-width: 768px) {
+  .glass-tier-soft {
+    --glass-blur: 8px;
+    --glass-sat: 1.03;
+  }
+
+  .glass-tier-mid {
+    --glass-blur: 10px;
+    --glass-sat: 1.06;
+  }
+
+  .glass-tier-solid {
+    --glass-blur: 12px;
+    --glass-sat: 1.08;
+  }
+}
+
+.glass-subcard {
+  border: 1px solid rgba(156, 176, 163, 0.2);
+  background: rgba(255, 255, 255, var(--glass-subcard-alpha, 0.66));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 8px 18px -16px rgba(83, 99, 89, 0.32);
+}
+
+.glass-control {
+  border: 1px solid rgba(156, 176, 163, 0.28);
+  background: rgba(255, 255, 255, var(--glass-control-alpha, 0.72));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 8px 16px -14px rgba(84, 100, 90, 0.34);
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 120ms ease;
+}
+
+.glass-control:hover {
+  background: rgba(255, 255, 255, var(--glass-control-hover-alpha, 0.84));
+  border-color: rgba(126, 152, 136, 0.35);
+}
+
+.glass-control:active {
+  transform: translateY(0.5px);
+}
+
+.glass-input {
+  border: 1px solid rgba(156, 176, 163, 0.28);
+  background: rgba(255, 255, 255, var(--glass-input-alpha, 0.86));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.glass-tone-clear {
+  --glass-subcard-alpha: 0.78;
+  --glass-control-alpha: 0.82;
+  --glass-control-hover-alpha: 0.9;
+  --glass-input-alpha: 0.93;
+}
+
+/* Runtime performance mode: keeps layout and color, lowers GPU pressure. */
+.perf-lite .glass-surface {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: var(--glass-fallback, rgba(255, 250, 242, 0.93)) !important;
+  box-shadow: 0 10px 22px -16px rgba(87, 104, 94, 0.28) !important;
+}
+
+.perf-lite .glass-surface::before,
+.perf-lite .glass-surface::after {
+  opacity: 0.2;
+}
+
+.perf-lite .glass-control,
+.perf-lite .glass-input,
+.perf-lite .glass-subcard {
+  box-shadow: none !important;
+}
+
+.glass-input::placeholder {
+  color: rgba(79, 97, 88, 0.5);
+}
+
+.glass-input:focus {
+  border-color: rgba(124, 153, 135, 0.56);
+  box-shadow:
+    0 0 0 2px rgba(156, 176, 163, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .glass-surface {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: var(--glass-accessible, rgba(255, 252, 247, 0.98)) !important;
+  }
+
+  .glass-surface::before,
+  .glass-surface::after {
+    opacity: 0.34;
+  }
+
+  .glass-control,
+  .glass-input,
+  .glass-subcard {
+    background: rgba(255, 255, 255, 0.97) !important;
+    box-shadow: none !important;
+  }
 }

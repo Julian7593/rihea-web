@@ -8,7 +8,7 @@ export default {
         cream: "#F5F5DC",
         coral: "#E6AAC4",
         mist: "#F8F4EA",
-        clay: "#6E7F75",
+        clay: "#4F6158",
       },
       fontFamily: {
         body: ["Nunito", "sans-serif"],
