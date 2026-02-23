@@ -1,7 +1,8 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
-import { BookOpen, HeartPulse, Leaf, LogIn, LogOut, Settings, User, X } from "lucide-react";
+import { BookOpen, HeartPulse, Leaf, LogIn, LogOut, Settings, Sparkles, User, X } from "lucide-react";
 import BrandLogo from "./components/brand/RiheaLogo";
+import BrandLaunchSplash from "./components/onboarding/BrandLaunchSplash";
 import HomeTab from "./components/tabs/HomeTab";
 import LaunchWelcome from "./components/onboarding/LaunchWelcome";
 import NavButton from "./components/ui/NavButton";
@@ -18,6 +19,8 @@ const AUTH_STORAGE_KEY = "rihea_auth_v1";
 const TEXT_SIZE_STORAGE_KEY = "rihea_text_size_v2";
 const GLASS_TONE_STORAGE_KEY = "rihea_glass_tone_v1";
 const PERF_MODE_STORAGE_KEY = "rihea_perf_mode_v1";
+const LAUNCH_WELCOME_SEEN_STORAGE_KEY = "rihea_launch_welcome_seen_v1";
+const LAUNCH_SURVEY_STORAGE_KEY = "rihea_launch_survey_v1";
 
 const CareTab = lazy(() => import("./components/tabs/CareTab"));
 const LearnTab = lazy(() => import("./components/tabs/LearnTab"));
@@ -172,6 +175,38 @@ const getStoredPerfMode = () => {
   }
 };
 
+const getInitialShowLaunchWelcome = () => {
+  if (typeof window === "undefined") return true;
+  try {
+    return window.localStorage.getItem(LAUNCH_WELCOME_SEEN_STORAGE_KEY) !== "1";
+  } catch {
+    return true;
+  }
+};
+
+const getStoredLaunchSurvey = () => {
+  const fallback = {
+    nickname: "",
+    stage: "",
+    priority: "",
+    reminder: "on",
+  };
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(LAUNCH_SURVEY_STORAGE_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return {
+      nickname: typeof parsed?.nickname === "string" ? parsed.nickname : "",
+      stage: typeof parsed?.stage === "string" ? parsed.stage : "",
+      priority: typeof parsed?.priority === "string" ? parsed.priority : "",
+      reminder: parsed?.reminder === "off" ? "off" : "on",
+    };
+  } catch {
+    return fallback;
+  }
+};
+
 export default function App() {
   const initialProfile = useMemo(() => getStoredProfile(), []);
   const initialTheme = useMemo(() => getStoredTheme(), []);
@@ -179,6 +214,8 @@ export default function App() {
   const initialTextSize = useMemo(() => getStoredTextSize(), []);
   const initialGlassTone = useMemo(() => getStoredGlassTone(), []);
   const initialPerfLite = useMemo(() => getStoredPerfMode(), []);
+  const initialShowLaunchWelcome = useMemo(() => getInitialShowLaunchWelcome(), []);
+  const initialLaunchSurvey = useMemo(() => getStoredLaunchSurvey(), []);
   const [lang, setLang] = useState("zh");
   const [themeId, setThemeId] = useState(initialTheme);
   const [size, setSize] = useState(initialTextSize);
@@ -192,7 +229,9 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const [showLaunchWelcome, setShowLaunchWelcome] = useState(true);
+  const [showLaunchBrand, setShowLaunchBrand] = useState(true);
+  const [showLaunchWelcome, setShowLaunchWelcome] = useState(false);
+  const [launchSurvey, setLaunchSurvey] = useState(initialLaunchSurvey);
   const [tab, setTab] = useState("home");
   const [homeFocusRequest, setHomeFocusRequest] = useState(null);
   const [careCategory, setCareCategory] = useState("soothe");
@@ -211,6 +250,13 @@ export default function App() {
   const style = presets[themeId] || presets.morandiGlass;
   const textSizePreset = TEXT_SIZE_CONFIG[size] || TEXT_SIZE_CONFIG.medium;
   const effectiveMotion = motionOn && !perfLite;
+  const chatUserName = useMemo(() => {
+    const profileName = profile?.name?.trim();
+    if (profileName) return profileName;
+    const accountName = auth?.account?.trim();
+    if (accountName) return accountName;
+    return txt(lang, "Mama", "准妈妈");
+  }, [auth?.account, lang, profile?.name]);
   const navItems = useMemo(
     () => [
       { id: "home", label: txt(lang, "Home", "首页"), Icon: Leaf },
@@ -221,6 +267,16 @@ export default function App() {
     [lang]
   );
   const [homeItem, careItem, learnItem, meItem] = navItems;
+
+  const closeLaunchWelcome = useCallback(() => {
+    setShowLaunchWelcome(false);
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(LAUNCH_WELCOME_SEEN_STORAGE_KEY, "1");
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
 
   useEffect(() => {
     if (!showChat) return;
@@ -236,14 +292,14 @@ export default function App() {
 
   useEffect(() => {
     // Keep body lock for full-screen overlays only.
-    const shouldLockBody = showChat || showNameSetup || showLogin || showLaunchWelcome;
+    const shouldLockBody = showChat || showNameSetup || showLogin || showLaunchBrand || showLaunchWelcome;
     if (!shouldLockBody) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previous;
     };
-  }, [showChat, showNameSetup, showLogin, showLaunchWelcome]);
+  }, [showChat, showNameSetup, showLogin, showLaunchBrand, showLaunchWelcome]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -299,6 +355,15 @@ export default function App() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(LAUNCH_SURVEY_STORAGE_KEY, JSON.stringify(launchSurvey));
+    } catch {
+      // ignore storage errors
+    }
+  }, [launchSurvey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     const root = document.documentElement;
     root.style.fontSize = `${textSizePreset.rootPx}px`;
     root.setAttribute("data-text-size", size);
@@ -316,8 +381,12 @@ export default function App() {
   useEffect(() => {
     const onEsc = (event) => {
       if (event.key !== "Escape") return;
+      if (showLaunchBrand) {
+        setShowLaunchBrand(false);
+        return;
+      }
       if (showLaunchWelcome) {
-        setShowLaunchWelcome(false);
+        closeLaunchWelcome();
         return;
       }
       if (showChat) {
@@ -338,7 +407,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onEsc);
     return () => window.removeEventListener("keydown", onEsc);
-  }, [showChat, showSettings, showNameSetup, showLogin, showLaunchWelcome, profile?.completed]);
+  }, [showChat, showSettings, showNameSetup, showLogin, showLaunchBrand, showLaunchWelcome, profile?.completed, closeLaunchWelcome]);
 
   const openChat = useCallback(() => {
     setShowSettings(false);
@@ -357,6 +426,15 @@ export default function App() {
     setShowSettings(true);
   }, []);
 
+  const previewLaunchWelcome = useCallback(() => {
+    setShowSettings(false);
+    setShowChat(false);
+    setShowLogin(false);
+    setShowNameSetup(false);
+    setShowLaunchBrand(true);
+    setShowLaunchWelcome(false);
+  }, []);
+
   const focusHomeSection = useCallback((targetId) => {
     setShowSettings(false);
     setShowChat(false);
@@ -365,13 +443,35 @@ export default function App() {
   }, []);
 
   const skipLaunchWelcome = useCallback(() => {
-    setShowLaunchWelcome(false);
-  }, []);
+    closeLaunchWelcome();
+  }, [closeLaunchWelcome]);
 
-  const startWelcomeFlow = useCallback(() => {
-    setShowLaunchWelcome(false);
-    focusHomeSection("rihea-breathing-entry");
-  }, [focusHomeSection]);
+  const handleLaunchWelcomeComplete = useCallback((payload) => {
+    const nextSurvey = {
+      nickname: typeof payload?.nickname === "string" ? payload.nickname.trim().slice(0, 20) : "",
+      stage: typeof payload?.stage === "string" ? payload.stage : "unknown",
+      priority: typeof payload?.priority === "string" ? payload.priority : "checkin",
+      reminder: payload?.reminder === "off" ? "off" : "on",
+    };
+    setLaunchSurvey(nextSurvey);
+    if (nextSurvey.nickname) {
+      setProfile((prev) => {
+        if (prev?.name?.trim()) return prev;
+        return { ...prev, name: nextSurvey.nickname };
+      });
+    }
+    setReminder(nextSurvey.reminder !== "off");
+    closeLaunchWelcome();
+    if (nextSurvey.priority === "breathe") {
+      focusHomeSection("rihea-breathing-entry");
+      return;
+    }
+    if (nextSurvey.priority === "trend") {
+      focusHomeSection("rihea-trend-entry");
+      return;
+    }
+    focusHomeSection("rihea-checkin-entry");
+  }, [closeLaunchWelcome, focusHomeSection]);
 
   const handleCareAction = useCallback(({ category, item }) => {
     if (category === "soothe" || category === "body") {
@@ -507,14 +607,31 @@ export default function App() {
   return (
       <MotionConfig reducedMotion={effectiveMotion ? "never" : "always"}>
       <AnimatePresence>
+        {showLaunchBrand && (
+          <BrandLaunchSplash
+            style={style}
+            motionEnabled={effectiveMotion}
+            onComplete={() => setShowLaunchBrand(false)}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
         {showLaunchWelcome && (
-          <LaunchWelcome lang={lang} onStart={startWelcomeFlow} onSkip={skipLaunchWelcome} />
+          <LaunchWelcome
+            lang={lang}
+            initialAnswers={launchSurvey}
+            onComplete={handleLaunchWelcomeComplete}
+            onSkip={skipLaunchWelcome}
+            style={style}
+            glassTone={glassTone}
+            perfLite={perfLite}
+          />
         )}
       </AnimatePresence>
 
       <div className={`${glassTone === "clear" ? "glass-tone-clear" : "glass-tone-rich"} ${perfLite ? "perf-lite" : ""}`}>
       <main
-        aria-hidden={showLaunchWelcome}
+        aria-hidden={showLaunchWelcome || showLaunchBrand}
         className="min-h-screen px-3 pb-40 pt-4 text-clay sm:px-6 sm:pb-10 sm:py-6"
         style={{
           background: style.bg,
@@ -564,7 +681,7 @@ export default function App() {
                 type="button"
                 onClick={openChat}
                 aria-label={txt(lang, "Open AI chat", "打开AI问答")}
-                className="relative -mt-7 flex flex-col items-center"
+                className="relative -mt-5 flex flex-col items-center"
               >
                 <span
                   className="grid h-14 w-14 place-items-center rounded-full border-4 border-white text-xs font-extrabold text-white shadow-soft"
@@ -669,8 +786,8 @@ export default function App() {
       </main>
 
       <nav
-        aria-hidden={showLaunchWelcome}
-        className="glass-surface glass-tier-solid fixed inset-x-3 bottom-[calc(0.65rem+env(safe-area-inset-bottom))] z-30 grid grid-cols-5 items-end overflow-visible rounded-[1.4rem] border px-2 pb-2 pt-3 shadow-soft lg:hidden"
+        aria-hidden={showLaunchWelcome || showLaunchBrand}
+        className="glass-surface glass-tier-solid !fixed inset-x-3 bottom-[calc(0.65rem+env(safe-area-inset-bottom))] z-[45] grid grid-cols-5 items-end overflow-visible rounded-[1.4rem] border px-2 pb-2 pt-3 shadow-soft lg:hidden"
         style={{
           "--glass-bg": style.navBg,
           "--glass-line": style.line,
@@ -697,7 +814,7 @@ export default function App() {
           type="button"
           onClick={openChat}
           aria-label={txt(lang, "Open AI chat", "打开AI问答")}
-          className="relative -mt-8 flex flex-col items-center"
+          className="relative -mt-5 flex flex-col items-center"
         >
           <span
             className="grid h-14 w-14 place-items-center rounded-full border-4 border-white text-xs font-extrabold text-white shadow-soft"
@@ -733,6 +850,7 @@ export default function App() {
             <ChatPanel
               lang={lang}
               style={style}
+              userName={chatUserName}
               initialDraft={chatPrefill}
               messages={chatMessages}
               setMessages={setChatMessages}
@@ -847,6 +965,14 @@ export default function App() {
                         >
                           <LogIn className="h-4 w-4" />
                           {txt(lang, "Re-sign in", "重新登录")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={previewLaunchWelcome}
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-sage/20 bg-[#fffaf2] px-3 py-2 text-sm font-semibold text-clay transition hover:bg-sage/10"
+                        >
+                          <Sparkles className="h-4 w-4" />
+                          {txt(lang, "Preview launch animation", "预览启动动画")}
                         </button>
                         <button
                           type="button"
